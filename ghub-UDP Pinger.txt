@@ -1,0 +1,73 @@
+UDP Pinger
+
+Server:
+
+import random
+import socket
+server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+server_address = ('localhost', 12001)
+server_socket.bind(server_address)
+while True:
+ #Random number between 0 and 10
+ rand = random.randint(0, 10)
+ data, client_address = server_socket.recvfrom(1024)
+ capitalized_data = data.upper()
+ if rand >= 4:
+ 
+ server_socket.sendto(capitalized_data, client_address)
+#close the socket
+server_socket.close()
+
+Client:
+
+import socket
+import time
+def send_ping(server_address, sequence_number):
+ try:
+ # To create a UDP socket
+ client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+ send_time = time.time()
+ ping_message = 'Ping {} {}'.format(sequence_number, send_time)
+ #Send a ping message to server
+ client_socket.sendto(ping_message.encode(), server_address)
+ client_socket.settimeout(1)
+ response, _ = client_socket.recvfrom(1024)
+ receive_time = time.time()
+ #calculating round trip time (RTT) in milliseconds
+ rtt = (receive_time - send_time) * 1000
+ #to print the response from the server and the RTT
+ print('Response from {}: {} | RTT: {:.2f} ms'.format(server_address, 
+response.decode(), rtt))
+ #closing the socket
+ client_socket.close()
+ return rtt
+ except socket.timeout:
+ #To Handle the timeout if no response is received
+ print('Ping {} Request timed out'.format(sequence_number))
+ return None
+server_address = ('localhost', 12001)
+# The number of pings sent
+num_pings = 10
+#to calculate round trip time and the packet loss
+rtt_times = []
+packet_loss_count = 0
+#Sending pings and collecting RTT times
+for sequence_number in range(1, num_pings + 1):
+ rtt = send_ping(server_address, sequence_number)
+ if rtt is not None:
+ rtt_times.append(rtt)
+ else:
+ packet_loss_count += 1
+# To calculate the max, min and avg statistics
+if rtt_times:
+ min_rtt = min(rtt_times)
+ max_rtt = max(rtt_times)
+ avg_rtt = sum(rtt_times) / len(rtt_times)
+ packet_loss_rate = (packet_loss_count / num_pings) * 100
+ print('\nPing statistics:')
+ print('Minimum RTT: {:.2f} ms'.format(min_rtt))
+ print('Maximum RTT: {:.2f} ms'.format(max_rtt))
+ print('Average RTT: {:.2f} ms'.format(avg_rtt))
+ print('Packet loss rate: {:.2f}%'.format(packet_loss_rate))
+else:
+ print('\nNo successful pings. All requests timed out.')
